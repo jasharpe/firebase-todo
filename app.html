@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap-theme.min.css">
+    <script src="https://cdn.firebase.com/js/client/2.2.0/firebase.js"></script>
+    <script src="https://code.jquery.com/jquery-2.1.3.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/js/bootstrap.min.js"></script>
+    <script>
+      function getUrlParameter(sParam) {
+        var sPageURL = window.location.search.substring(1);
+        var sURLVariables = sPageURL.split('&');
+        for (var i = 0; i < sURLVariables.length; i++) {
+          var sParameterName = sURLVariables[i].split('=');
+          if (sParameterName[0] == sParam) {
+              return sParameterName[1];
+          }
+        }
+      } 
+    
+      var ref = new Firebase("https://glaring-fire-5349.firebaseio.com/");
+      var auth;
+      var listeners = [];
+      
+      function clearListeners() {
+        for (var i = 0; i < listeners.length; i++) {
+          listeners[i][0].off(listeners[i][1]);
+        }
+        listeners = [];
+      }
+      
+      window.onpopstate = function(event) {
+        if (event.state.page_type === "lists") {
+          showLists();
+        } else if (event.state.page_type === "list") {
+          showList(event.state.key);
+        }
+      };
+      
+      function showLists() {
+        $("#lists_page").removeClass("hidden");
+        $("#list_page").addClass("hidden");
+      }
+      
+      function showList(key) {
+        clearListeners();
+        $("#lists_link").click(function(e) {
+          e.preventDefault();
+          goToLists();
+        });
+        var listRef = ref.child("lists").child(auth.uid).child(key);
+        listRef.on('value', function(snap) {
+          $("#list_title").text(snap.val().title);
+          $("#lists_page").addClass("hidden");
+          $("#list_page").removeClass("hidden");
+        });
+        listeners.push([listRef, 'value']);
+      }
+      
+      function goToLists() {
+        history.pushState({"page_type": "lists"}, "", "?");
+        showLists();
+      }
+      
+      function goToList(key) {
+        history.pushState({"page_type": "list", "key": key}, "", "?list=" + key);
+        showList(key);
+      }
+      
+      function setInitializeState() {
+        if (getUrlParameter('list')) {
+          var key = getUrlParameter('list');
+          history.replaceState({"page_type": "list", "key": key}, "", window.location.search);
+          showList(key);
+        } else {
+          history.replaceState({"page_type": "lists"}, "", window.location.search);
+          showLists();
+        }
+      }
+    
+      $(function() {
+        auth = ref.getAuth();
+        if (!auth) {
+          // TODO: fix probable race condition.
+          ref.authAnonymously(function(error, authData) {
+            if (error) {
+              console.log("Login Failed!", error);
+            } else {
+              console.log("Authenticated successfully with payload: ", authData);
+            }
+          });
+        }
+        
+        // Figure out where we are.
+        setInitializeState();
+        
+        $("#list_title_form").submit(function(event) {
+          $("#list_title_modal").modal('hide');
+          if ($('#list_title_text').val()) {
+            var title = $('#list_title_text').val();
+            var data = {
+              'title' : title,
+              'deleted' : false,
+            };
+            var key = ref.child("lists/" + auth.uid).push(data).key();
+            console.log(key);
+            //ref.child("list_data/" + auth.uid + "/" + key + "/lists_data").set(data);
+          }
+          event.preventDefault();
+        });
+        
+        function createTodoClick(initial_checked) {
+          var checked = initial_checked;
+          return function(e) {
+            e.preventDefault();
+            checked = !checked;
+            if (checked) {
+              $(this).parent().addClass("todo-done");
+              $(this).parent().removeClass("todo-not-done");
+              /*$(this).parent().find(".todo-text").addClass("todo-text-done");
+              $(this).parent().find(".todo-text").removeClass("todo-text-not-done");
+              $(this).addClass("todo-check-done");
+              $(this).removeClass("todo-check-not-done");*/
+            } else {
+              $(this).parent().addClass("todo-not-done");
+              $(this).parent().removeClass("todo-done");
+              /*$(this).parent().find(".todo-text").addClass("todo-text-not-done");
+              $(this).parent().find(".todo-text").removeClass("todo-text-done");
+              $(this).addClass("todo-check-not-done");
+              $(this).removeClass("todo-check-done");*/
+            }
+          };
+        }
+        
+        $(".todo").addClass("todo-not-done");
+        $(".todo-check").click(createTodoClick(false));
+                
+        // Register click handler for New List button.
+        $("#new_list").click(function() {
+          $('#list_title_text').val("");
+          $('#list_title_modal').modal('show');
+          $('#list_title_modal').on('shown.bs.modal', function (e) {
+            $('#list_title_text').focus();
+          });
+        });  // New List
+                
+        ref.child("lists/" + auth.uid).on('value', function(snap) {
+          $("#lists").empty();
+          snap.forEach(function (data) {
+            if (data.val().deleted) {
+              return;
+            }
+            
+            // TODO: fix injection vulnerability here.
+            var list_link = $('<a href="?list=' + data.key() + '" class="list-group-item">' + data.val().title + '</a>');
+            list_link.click(function(e) {
+              e.preventDefault();
+              goToList(data.key());
+            })
+            var delete_link = $('<button type="button" class="close" aria-label="Close"><span aria-hidden="true">&times;</span></button>');
+            delete_link.click(function(e) {
+              ref.child("lists/" + auth.uid + "/" + data.key()).set({
+                'deleted' : true,
+              });
+              e.preventDefault();
+            });
+            list_link.append(delete_link);
+            $('#lists').append(list_link);
+          });
+        });
+      });
+    </script>
+    <style>
+    #lists {
+      margin-bottom:20px;
+    }
+    
+    .page-header {
+      margin-top:20px;
+    }
+    
+    .todo-check {
+      border-radius:.25em;
+      border-style: solid;
+      border-width: 2px;
+      margin: .1em .5em .3em 0;
+      line-height:1em;
+      padding-left:1px;
+      padding-right:1.5px;
+      color: black;
+    }
+    
+    .todo-check:hover, .todo-check:visited {
+      color: black;
+    }
+    
+    .todo-check span {
+      line-height: 0.9em;
+    }
+    
+    .todo-done .todo-check-mark {
+      opacity: 1;
+      transition: opacity 0.5s;
+    }
+    
+    .todo-not-done .todo-check-mark {
+      opacity: 0;
+      transition: opacity 0.5s;
+    }
+    
+    .todo-done .todo-check {
+      color: grey;
+      transition: color 0.5s;
+    }
+    
+    .todo-not-done .todo-check {
+      color: black;
+      transition: color 0.5s;
+    }
+    
+    .todo-not-done .todo-text {
+      color:black;
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    
+    .todo-done .todo-text {
+      color:grey;
+      text-decoration: line-through;
+      transition: color 0.2s;
+    }
+    </style>
+  </head>
+  <body role="document">
+    <div id="list_title_modal" class="modal fade bs-example-modal-sm" tabindex="-1" role="dialog" 
+         aria-labelledby="mySmallModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+          <form id="list_title_form">
+            <div class="modal-header">
+              <h4 class="modal-title">Enter list title</h4>
+            </div>
+            <div class="modal-body">
+              <input id="list_title_text" placeholder="Title" class="form-control" type="text">
+            </div>
+            <div class="modal-footer">
+              <button type="submit" class="btn btn-primary">Confirm</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    
+    <nav class="navbar navbar-default navbar-static-top">
+      <div class="container">
+        <div class="navbar-header">
+          <a class="navbar-brand" href="?">Firebase Todo</a>
+        </div>
+        <ul class="nav navbar-nav">
+          <li><a href="?">Lists</a></li>
+        </ul>
+      </div>
+    </nav>
+    
+    <div class="container" role="main">
+      <div id="lists_page" class="hidden">
+        <div class="page-header">
+          <h1>Your Lists</h1>
+        </div>
+        <div class="row">
+          <div class="col-md-6">
+            <div class="list-group" id="lists">
+            </div>
+          </div>
+        </div>
+        <div class="clearfix"></div>
+        <button id="new_list" class="btn btn-primary">New List</button>
+      </div>
+      <div id="list_page" class="hidden">
+        <a href="?" id="lists_link" class="btn btn-primary">Back to Lists</a>
+        <div class="page-header">
+          <h1 id="list_title">PLACEHOLDER</h1>
+          <ul class="list-group">
+            <li class="list-group-item todo"><a href="#" class="pull-left todo-check"><span class="todo-check-mark glyphicon glyphicon-ok" aria-hidden="true"></span></a><span class="todo-text">Cras justo odio</span></li>
+            <li class="list-group-item todo"><a href="#" class="pull-left todo-check"><span class="todo-check-mark glyphicon glyphicon-ok" aria-hidden="true"></span></a><span class="todo-text">Cras justo odio</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
