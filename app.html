@@ -135,6 +135,24 @@
         
         $(".todo").addClass("todo-not-done");
         $(".todo-check").click(createTodoClick(false));
+        
+        $(".todo-text").click(function (e) {
+          e.preventDefault();
+          $(this).hide();
+          var form = $(this).parent().find(".todo-text-editor-form");
+          form.show();
+          var editor = form.find(".todo-text-editor");
+          editor.val($(this).text());
+          editor.select();
+        })
+        
+        $(".todo-text-editor-form").submit(function (e) {
+          e.preventDefault();
+          $(this).hide();
+          var todo_text = $(this).parent().find(".todo-text")
+          todo_text.text($(this).find(".todo-text-editor").val());
+          todo_text.show();
+        });
                 
         // Register click handler for New List button.
         $("#new_list").click(function() {
@@ -180,6 +198,15 @@
       margin-top:20px;
     }
     
+    .todo-list {
+      box-shadow:none;
+      -webkit-box-shadow:none;
+    }
+    
+    .todo {
+      box-shadow: 0 1px 2px rgba(0,0,0,.075);
+    }
+    
     .todo-check {
       border-radius:.25em;
       border-style: solid;
@@ -222,13 +249,25 @@
     .todo-not-done .todo-text {
       color:black;
       text-decoration: none;
-      transition: color 0.2s;
+      transition: color 0.5s;
     }
     
     .todo-done .todo-text {
       color:grey;
       text-decoration: line-through;
-      transition: color 0.2s;
+      transition: color 0.5s;
+    }
+    
+    .todo-text-editor {
+      border:none;
+      box-shadow:none;
+      line-height: 1.42857143;
+      padding: 0;
+      margin-top: -7px;
+    }
+    
+    .indented {
+      margin-left:25px;
     }
     </style>
   </head>
@@ -281,9 +320,19 @@
         <a href="?" id="lists_link" class="btn btn-primary">Back to Lists</a>
         <div class="page-header">
           <h1 id="list_title">PLACEHOLDER</h1>
-          <ul class="list-group">
-            <li class="list-group-item todo"><a href="#" class="pull-left todo-check"><span class="todo-check-mark glyphicon glyphicon-ok" aria-hidden="true"></span></a><span class="todo-text">Cras justo odio</span></li>
-            <li class="list-group-item todo"><a href="#" class="pull-left todo-check"><span class="todo-check-mark glyphicon glyphicon-ok" aria-hidden="true"></span></a><span class="todo-text">Cras justo odio</span></li>
+          <ul class="list-group todo-list">
+            <li class="list-group-item todo">
+              <a href="#" class="pull-left todo-check">
+                <span class="todo-check-mark glyphicon glyphicon-ok" aria-hidden="true"></span>
+              </a>
+              <span class="todo-text">Cras justo odio</span>
+              <form class="todo-text-editor-form form-inline" style="display:none;">
+                <div class="form-group">
+                  <input class="todo-text-editor form-control" placeholder="Cras justo odio" type="text">
+                </div>
+              </form>
+            </li>
+            <li class="list-group-item todo indented"><a href="#" class="pull-left todo-check"><span class="todo-check-mark glyphicon glyphicon-ok" aria-hidden="true"></span></a><span class="todo-text">Cras justo odio</span></li>
           </ul>
         </div>
       </div>
