@@ -146,6 +146,11 @@
           editor.select();
         })
         
+        $(".todo-text-editor").blur(function (e) {
+          var form = $(this).parent().parent();
+          form.submit();
+        });
+        
         $(".todo-text-editor-form").submit(function (e) {
           e.preventDefault();
           $(this).hide();
