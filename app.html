@@ -55,7 +55,88 @@
           $("#lists_page").addClass("hidden");
           $("#list_page").removeClass("hidden");
         });
+        var listDataRef = ref.child("list_data").child(key);
+        
+        function createTodo(todo_key, todo_checked, todo_text_val, is_new) {
+          var todo = $('<li class="list-group-item todo"></li>');
+          var todo_check = $('<a href="#" class="pull-left todo-check"><span class="todo-check-mark glyphicon glyphicon-ok" aria-hidden="true"></span></a>');
+          todo.append(todo_check);
+          var todo_text = $('<span contenteditable="true" data-ph="Todo" class="todo-text">' + todo_text_val + '</span>');
+          todo.append(todo_text);
+          $("#todo-list").append(todo);
+      
+          if (!is_new) {
+            var delete_link = $('<button type="button" class="close" aria-label="Close"><span aria-hidden="true">&times;</span></button>');
+            todo.append(delete_link);
+            delete_link.click(function(e) {
+              listDataRef.child(todo_key).set({
+                "text": todo_text.text(),
+                "checked": checked,
+                'deleted' : true,
+              });
+              e.preventDefault();
+            });
+          }
+          
+          var checked = todo_checked;
+          if (checked) {
+            todo.addClass("todo-done");
+          } else {
+            todo.addClass("todo-not-done");
+          }
+          todo_check.click(function(e) {
+              e.preventDefault();
+              checked = !checked;
+              if (checked) {
+                $(this).parent().addClass("todo-done");
+                $(this).parent().removeClass("todo-not-done");
+              } else {
+                $(this).parent().addClass("todo-not-done");
+                $(this).parent().removeClass("todo-done");
+              }
+              if (!is_new) {
+                listDataRef.child(todo_key).set({
+                  "text": todo_text.text(),
+                  "checked": checked,
+                });
+              }
+            });
+      
+          todo_text.keydown(function (e) {
+            if (e.keyCode === 13) {
+              e.preventDefault();
+              todo_text.blur();
+            }
+          });
+
+          if (!is_new) {
+            todo_text.blur(function (e) {
+              listDataRef.child(todo_key).set({
+                "text": $(this).text(),
+                "checked": checked,
+              });
+            });
+          } else {
+            todo_text.blur(function (e) {
+              listDataRef.push({
+                "text": $(this).text(),
+                "checked": checked,
+              });
+            });
+          }
+        }
+        
+        listDataRef.on('value', function(snap) {
+          $("#todo-list").empty();
+          snap.forEach(function (data) {
+            if (data.val().deleted === undefined) {
+              createTodo(data.key(), data.val().checked, data.val().text, false);
+            }
+          });
+          createTodo(undefined, false, "", true);
+        });
         listeners.push([listRef, 'value']);
+        listeners.push([listDataRef, 'value']);
       }
       
       function goToLists() {
@@ -109,58 +190,6 @@
           }
           event.preventDefault();
         });
-        
-        function createTodoClick(initial_checked) {
-          var checked = initial_checked;
-          return function(e) {
-            e.preventDefault();
-            checked = !checked;
-            if (checked) {
-              $(this).parent().addClass("todo-done");
-              $(this).parent().removeClass("todo-not-done");
-              /*$(this).parent().find(".todo-text").addClass("todo-text-done");
-              $(this).parent().find(".todo-text").removeClass("todo-text-not-done");
-              $(this).addClass("todo-check-done");
-              $(this).removeClass("todo-check-not-done");*/
-            } else {
-              $(this).parent().addClass("todo-not-done");
-              $(this).parent().removeClass("todo-done");
-              /*$(this).parent().find(".todo-text").addClass("todo-text-not-done");
-              $(this).parent().find(".todo-text").removeClass("todo-text-done");
-              $(this).addClass("todo-check-not-done");
-              $(this).removeClass("todo-check-done");*/
-            }
-          };
-        }
-        
-        $(".todo").addClass("todo-not-done");
-        $(".todo-check").click(createTodoClick(false));
-        
-        /*$(".todo-text").click(function (e) {
-          e.preventDefault();
-          $(this).hide();
-          var form = $(this).parent().find(".todo-text-editor-form");
-          form.show();
-          var editor = form.find(".todo-text-editor");
-          editor.val($(this).text());
-          editor.select();
-        });*/
-        
-        $(".todo-text").keydown(function (e) {
-          if (e.keyCode === 13) {
-            e.preventDefault();
-          }
-        });
-        
-        ref.child("todo_text").on("value", function (snap) {
-          $($(".todo-text")[0]).text(snap.val()['text']);
-        });
-        
-        $(".todo-text").blur(function (e) {
-          ref.child("todo_text").set({
-            "text": $(this).text(),
-          });
-        });
      
         // Register click handler for New List button.
         $("#new_list").click(function() {
@@ -206,7 +235,7 @@
       margin-top:20px;
     }
     
-    .todo-list {
+    #todo-list {
       box-shadow:none;
       -webkit-box-shadow:none;
     }
@@ -348,16 +377,8 @@
       <div id="list_page" class="hidden">
         <a href="?" id="lists_link" class="btn btn-primary">Back to Lists</a>
         <div class="page-header">
-          <h1 id="list_title">PLACEHOLDER</h1>
-          <ul class="list-group todo-list">
-            <li class="list-group-item todo">
-              <a href="#" class="pull-left todo-check">
-                <span class="todo-check-mark glyphicon glyphicon-ok" aria-hidden="true"></span>
-              </a>
-              <span contenteditable="true" data-ph="Todo" class="todo-text">Cras justo odio</span>
-            </li>
-            <li class="list-group-item todo indented"><a href="#" class="pull-left todo-check"><span class="todo-check-mark glyphicon glyphicon-ok" aria-hidden="true"></span></a><span class="todo-text">Cras justo odio</span></li>
-          </ul>
+          <h1 id="list_title"></h1>
+          <ul id="todo-list" class="list-group"></ul>
         </div>
       </div>
     </div>
