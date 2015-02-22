@@ -136,7 +136,7 @@
         $(".todo").addClass("todo-not-done");
         $(".todo-check").click(createTodoClick(false));
         
-        $(".todo-text").click(function (e) {
+        /*$(".todo-text").click(function (e) {
           e.preventDefault();
           $(this).hide();
           var form = $(this).parent().find(".todo-text-editor-form");
@@ -144,7 +144,23 @@
           var editor = form.find(".todo-text-editor");
           editor.val($(this).text());
           editor.select();
-        })
+        });*/
+        
+        $(".todo-text").keydown(function (e) {
+          if (e.keyCode === 13) {
+            e.preventDefault();
+          }
+        });
+        
+        ref.child("todo_text").on("value", function (snap) {
+          $($(".todo-text")[0]).text(snap.val()['text']);
+        });
+        
+        $(".todo-text").blur(function (e) {
+          ref.child("todo_text").set({
+            "text": $(this).text(),
+          });
+        });
         
         $(".todo-text-editor").blur(function (e) {
           var form = $(this).parent().parent();
@@ -263,7 +279,7 @@
       transition: color 0.5s;
     }
     
-    .todo-text-editor {
+    .todo-text-editor, .todo-text-editor:focus {
       border:none;
       box-shadow:none;
       line-height: 1.42857143;
@@ -271,9 +287,30 @@
       margin-top: -7px;
     }
     
+    .todo-text:focus {
+      border:none;
+      box-shadow:none;
+      -webkit-box-shadow:none;
+      outline:none;
+    }
+    
+    .todo-text-editor:focus {
+      color:grey;
+    }
+    
     .indented {
       margin-left:25px;
     }
+    
+    [contentEditable=true]:empty:not(:focus):before{
+      content:attr(data-ph);
+      color:grey;
+    }
+    
+    /*[contentEditable=true]:empty:before{
+      content:attr(data-ph);
+      color:grey;
+    }*/
     </style>
   </head>
   <body role="document">
@@ -330,7 +367,7 @@
               <a href="#" class="pull-left todo-check">
                 <span class="todo-check-mark glyphicon glyphicon-ok" aria-hidden="true"></span>
               </a>
-              <span class="todo-text">Cras justo odio</span>
+              <span contenteditable="true" data-ph="Todo" class="todo-text">Cras justo odio</span>
               <form class="todo-text-editor-form form-inline" style="display:none;">
                 <div class="form-group">
                   <input class="todo-text-editor form-control" placeholder="Cras justo odio" type="text">
