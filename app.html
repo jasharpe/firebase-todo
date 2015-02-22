@@ -161,20 +161,7 @@
             "text": $(this).text(),
           });
         });
-        
-        $(".todo-text-editor").blur(function (e) {
-          var form = $(this).parent().parent();
-          form.submit();
-        });
-        
-        $(".todo-text-editor-form").submit(function (e) {
-          e.preventDefault();
-          $(this).hide();
-          var todo_text = $(this).parent().find(".todo-text")
-          todo_text.text($(this).find(".todo-text-editor").val());
-          todo_text.show();
-        });
-                
+     
         // Register click handler for New List button.
         $("#new_list").click(function() {
           $('#list_title_text').val("");
@@ -183,14 +170,14 @@
             $('#list_title_text').focus();
           });
         });  // New List
-                
+
         ref.child("lists/" + auth.uid).on('value', function(snap) {
           $("#lists").empty();
           snap.forEach(function (data) {
             if (data.val().deleted) {
               return;
             }
-            
+
             // TODO: fix injection vulnerability here.
             var list_link = $('<a href="?list=' + data.key() + '" class="list-group-item">' + data.val().title + '</a>');
             list_link.click(function(e) {
@@ -279,23 +266,11 @@
       transition: color 0.5s;
     }
     
-    .todo-text-editor, .todo-text-editor:focus {
-      border:none;
-      box-shadow:none;
-      line-height: 1.42857143;
-      padding: 0;
-      margin-top: -7px;
-    }
-    
     .todo-text:focus {
       border:none;
       box-shadow:none;
       -webkit-box-shadow:none;
       outline:none;
-    }
-    
-    .todo-text-editor:focus {
-      color:grey;
     }
     
     .indented {
@@ -307,10 +282,22 @@
       color:grey;
     }
     
-    /*[contentEditable=true]:empty:before{
-      content:attr(data-ph);
-      color:grey;
-    }*/
+    @-webkit-keyframes blink {
+        from, to { color: white }
+        50% { color: black }
+    }
+    
+    @-moz-keyframes blink {
+        from, to { color: white }
+        50% { color: black }
+    }
+    
+    [contentEditable=true]:empty:focus:before{
+      content: "|";
+      color:black;
+      -webkit-animation: 1s blink step-end infinite;
+      -moz-animation: 1s blink step-end infinite;
+    }
     </style>
   </head>
   <body role="document">
@@ -368,11 +355,6 @@
                 <span class="todo-check-mark glyphicon glyphicon-ok" aria-hidden="true"></span>
               </a>
               <span contenteditable="true" data-ph="Todo" class="todo-text">Cras justo odio</span>
-              <form class="todo-text-editor-form form-inline" style="display:none;">
-                <div class="form-group">
-                  <input class="todo-text-editor form-control" placeholder="Cras justo odio" type="text">
-                </div>
-              </form>
             </li>
             <li class="list-group-item todo indented"><a href="#" class="pull-left todo-check"><span class="todo-check-mark glyphicon glyphicon-ok" aria-hidden="true"></span></a><span class="todo-text">Cras justo odio</span></li>
           </ul>
